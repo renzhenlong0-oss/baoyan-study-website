@@ -15,7 +15,9 @@ const EXPORT_SNIPPET = `{
   currentWeek, ensureWeekPlan, getWeekPlan,
   parseAiStrategy: StrategyEngine.parseAiStrategy,
   parseProposal, applyStrategyProposal, undoLastApply, buildStrategyProposalCard,
-  applyProposal, undoAdopt
+  applyProposal, undoAdopt,
+  serializePlanContext: StrategyEngine.serializePlanContext,
+  buildAiSystemPrompt
 }`;
 
 const sandbox = H.makeSandbox();
@@ -142,5 +144,31 @@ t.ok('上限 20 条（超出自动淘汰最旧）', (function () {
   for (var i = 0; i < 25; i++) X.SnapshotEngine.create('批量' + i, 6);
   return X.state.data.snapshots.length === 20;
 })());
+
+console.log('\n8. AI 实时计划上下文（v5：AI 必须知道网站实际安排了什么）');
+fresh();
+var plan6 = X.ensureWeekPlan(6);
+var allTitles = [];
+plan6.subjects.forEach(function (sb) { sb.tasks.forEach(function (x) { allTitles.push(x.title); }); });
+var ctx = X.serializePlanContext(6);
+t.ok('上下文包含本周计划标题', ctx.indexOf('第6周计划') !== -1);
+t.ok('上下文包含具体任务（抽查第一条任务标题）', allTitles.length > 0 && ctx.indexOf(allTitles[0]) !== -1);
+t.ok('上下文包含任务状态', ctx.indexOf('未开始') !== -1 || ctx.indexOf('已完成') !== -1);
+t.ok('上下文包含今日信息', ctx.indexOf('今天') !== -1 && ctx.indexOf('今日无计划任务') === -1 || ctx.indexOf('计划任务') !== -1);
+t.ok('上下文包含词汇中心简况', ctx.indexOf('词汇中心') !== -1);
+t.ok('上下文长度受限（≤2500+省略标记）', ctx.length <= 2600);
+/* 无计划时的兜底 */
+X.state.data = X.clone(X.DEFAULT_INIT_DATA);
+X.state.data.currentWeekOverride = 7;
+var ctxEmpty = X.serializePlanContext(7);
+t.ok('未生成计划时上下文如实说明', ctxEmpty.indexOf('尚未生成') !== -1);
+/* 完整系统提示词包含实时计划 + 防编造规则 */
+X.state.data = X.clone(X.DEFAULT_INIT_DATA);
+X.state.data.currentWeekOverride = 6;
+X.ensureWeekPlan(6);
+var prompt = X.buildAiSystemPrompt();
+t.ok('系统提示词含实时计划数据', prompt.indexOf('本周计划与今日安排') !== -1);
+t.ok('系统提示词含防编造规则', prompt.indexOf('禁止编造安排理由') !== -1);
+t.ok('系统提示词含课表与任务区分规则', prompt.indexOf('不是计划任务') !== -1);
 
 t.report();

@@ -242,7 +242,16 @@ function buildAiSystemPrompt() {
     '纯答疑时不要输出 JSON。',
     '',
     '【用户与学期上下文】',
-    StrategyEngine.serializeContext(currentWeek())
+    StrategyEngine.serializeContext(currentWeek()),
+    '',
+    '【本周计划与今日安排（网站实时数据，每次请求更新）】',
+    StrategyEngine.serializePlanContext(currentWeek()),
+    '',
+    '回答关于计划/任务/安排的问题时，必须以上面两段实时数据为准：',
+    '1. 被问"为什么安排某个任务/某门课"时，先核对上面数据：计划里有的，结合分配理由/时间预算/阶段目标如实解释；',
+    '2. 计划里【没有】的任务或课程（例如用户提到计划里不存在的"大学语文任务"），必须如实说明"当前周计划中没有安排这项内容"，可以指出计划里实际安排了什么，或给出建议，但【禁止编造安排理由】；',
+    '3. 课表课程（课表：…）是学校课程，不是计划任务，两者不要混淆；',
+    '4. 数据不足或不确定时，明确说"不确定"，不要猜测。'
   ].join('\n');
 }
 

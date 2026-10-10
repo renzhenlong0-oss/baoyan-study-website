@@ -322,5 +322,86 @@ const StrategyEngine = {
     var text = parts.join('\n');
     if (text.length > 3000) text = text.slice(0, 3000) + '（其余省略）';
     return text;
+  },
+
+  /* ---------------- 实时计划上下文（AI Prompt 用，v5 新增） ----------------
+   * 修复：AI 不知道网站实际安排了什么任务，被问"为什么安排X"时只能编造。
+   * 每次请求时实时序列化：本周计划全部任务（含状态/备注）、今日课表与任务、
+   * 今日复盘打卡、词汇中心简况、本周分配理由。 */
+  serializePlanContext: function (week) {
+    var d = state.data;
+    var wk = week != null ? week : currentWeek();
+    var parts = [];
+
+    var plan = getWeekPlan(wk);
+    if (!plan) {
+      parts.push('第' + wk + '周计划尚未生成（用户尚未点击生成）。');
+    } else {
+      parts.push('第' + wk + '周计划' +
+        (plan.strategy && plan.strategy.summary ? '（战略：' + plan.strategy.summary + '）' : '') + '：');
+      plan.subjects.forEach(function (sb) {
+        parts.push('· ' + sb.subject + '（计划 ' + sb.plannedHours + 'h）：');
+        sb.tasks.slice().sort(function (a, b) { return (a.day - b.day) || timeToMin(a.time) - timeToMin(b.time); })
+          .forEach(function (t) {
+            var st = t.status === 'done' ? '已完成' : (t.status === 'skipped' ? '已跳过' : '未开始');
+            parts.push('    ' + DAY_NAMES[t.day - 1] + ' ' + t.time + ' ' + t.title +
+              '（' + st + (t.note ? '；备注：' + t.note : '') + '）');
+          });
+      });
+    }
+
+    /* 本周分配理由（若有确认过的战略） */
+    var ws = d.weeklyStrategy;
+    if (ws && Array.isArray(ws.allocation) && ws.allocation.length) {
+      parts.push('本周分配理由：' + ws.allocation.map(function (a) {
+        return a.subject + ' ' + a.hours + 'h（' + (a.reason || '无理由') + '）';
+      }).join('；'));
+    }
+
+    /* 今日课表与任务 */
+    var t = todayStr();
+    var wd = weekdayOf(t);
+    parts.push('今天 ' + fmtDateCN(t) + '（第' + wk + '周）：');
+    var entries = getWeekEntries(wk).filter(function (it) { return it.day === wd; });
+    if (entries.length) {
+      entries.sort(function (a, b) { return timeToMin(a.row.time) - timeToMin(b.row.time); })
+        .forEach(function (it) {
+          parts.push('    课表：' + it.row.time + ' ' + (COURSE_SHORT[it.course.id] || it.course.name) +
+            (it.entry.location ? ' @' + it.entry.location : ''));
+        });
+    }
+    var dayTasks = [];
+    if (plan) {
+      plan.subjects.forEach(function (sb) {
+        sb.tasks.forEach(function (task) { if (task.day === wd) dayTasks.push(task); });
+      });
+    }
+    if (dayTasks.length) {
+      dayTasks.sort(function (a, b) { return timeToMin(a.time) - timeToMin(b.time); })
+        .forEach(function (task) {
+          var st = task.status === 'done' ? '已完成' : (task.status === 'skipped' ? '已跳过' : '未开始');
+          parts.push('    计划任务：' + task.time + ' ' + task.title + '（' + st + '）');
+        });
+    } else {
+      parts.push('    今日无计划任务。');
+    }
+
+    /* 今日复盘打卡（已填写的部分） */
+    var log = getDailyLog(t);
+    if (log && log.checklist) {
+      parts.push('今日复盘：单词 ' + (log.checklist.vocabCount || 0) + ' 个，听力 ' +
+        (log.checklist.listeningMinutes || 0) + ' 分钟，作业完成 ' + (log.checklist.homeworkDone ? '是' : '否') +
+        '，健身 ' + (log.checklist.gymDone ? '完成' : '未完成') + '。');
+    }
+
+    /* 词汇中心简况 */
+    if (typeof VocabEngine !== 'undefined') {
+      var vs = VocabEngine.computeStats();
+      parts.push('词汇中心：共 ' + vs.total + ' 词，待复习 ' + vs.backlog + ' 个，近7天学习 ' + vs.activity.minutes7d + ' 分钟。');
+    }
+
+    var text = parts.join('\n');
+    if (text.length > 2500) text = text.slice(0, 2500) + '（其余省略）';
+    return text;
   }
 };
