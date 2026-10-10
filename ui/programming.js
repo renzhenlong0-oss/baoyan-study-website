@@ -10,6 +10,7 @@ let progLanguage = 'C';
 let progCurrentProblem = null;
 let progHintLevel = 0;       // 已解锁的提示层级（0=未解锁）
 let progResultDirty = false;
+let progAnswerShown = false; // 答案是否展开（点击「查看答案」后显示，切题时重置）
 
 function renderProgramming() {
   var root = document.getElementById('view-programming');
@@ -75,7 +76,8 @@ function renderRecommendCard() {
     progLanguage = sel.value;
     progCurrentProblem = null;
     progHintLevel = 0;
-    renderRecommendCard();
+    progAnswerShown = false;
+    renderProgramming();   // 整体重渲染（renderRecommendCard 只构建卡片，不负责挂回 DOM）
   });
   langRow.appendChild(sel);
   card.appendChild(langRow);
@@ -94,6 +96,7 @@ function renderRecommendCard() {
       backBtn.addEventListener('click', function () {
         progCurrentProblem = null;
         progHintLevel = 0;
+        progAnswerShown = false;
         renderProgramming();
       });
       card.appendChild(backBtn);
@@ -158,6 +161,7 @@ function renderProblemPickerCard() {
         row.addEventListener('click', function () {
           progCurrentProblem = p;
           progHintLevel = 0;
+          progAnswerShown = false;
           renderProgramming();
         });
       }
@@ -196,6 +200,25 @@ function renderProblemBody(p) {
   }
   wrap.appendChild(el('div', 'hint', '来源：' + (p.source || '内置') + '。先在本地编译器/洛谷完成本题，再回填结果。'));
 
+  /* 参考答案：附加在题目后，点击按钮才显示（可再次点击收起） */
+  var ansBtn = el('button', 'btn btn-sm', progAnswerShown ? '收起答案' : '查看答案');
+  ansBtn.title = '建议先自己动手写一遍，再看参考解答';
+  ansBtn.addEventListener('click', function () {
+    progAnswerShown = !progAnswerShown;
+    renderProgramming();
+  });
+  wrap.appendChild(ansBtn);
+  if (progAnswerShown) {
+    var ans = el('div', 'problem-answer');
+    if (p.thought) ans.appendChild(el('div', null, '💡 思路：' + p.thought));
+    if (p.solution) {
+      var pre = document.createElement('pre');
+      pre.textContent = p.solution;
+      ans.appendChild(pre);
+    }
+    wrap.appendChild(ans);
+  }
+
   /* 提交区（self-report） */
   var submitRow = el('div', 'field-row submit-row');
   var selStatus = document.createElement('select');
@@ -225,6 +248,7 @@ function renderProblemBody(p) {
     if (!res.ok) { alert(res.error); return; }
     if (selStatus.value === 'correct') {
       progHintLevel = 0;
+      progAnswerShown = false;
       progCurrentProblem = null;
     } else {
       /* 答错：解锁下一层提示（不直接给答案） */
@@ -308,6 +332,7 @@ function renderWrongBookCard() {
     btn.addEventListener('click', function () {
       progCurrentProblem = p;
       progHintLevel = 0;
+      progAnswerShown = false;
       progLanguage = p.language;
       renderProgramming();
       /* 滚动到题目区 */

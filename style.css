@@ -1630,6 +1630,27 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .logic-rule { background: rgba(255, 255, 255, 0.05); }
 .logic-rule-badge.off { background: rgba(255, 255, 255, 0.08); color: var(--gray); }
 
+/* 编程训练：题目后附参考答案（点击「查看答案」后展开，深色代码块） */
+.problem-answer {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.problem-answer pre {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+  color: #C9D4E0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 6px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
 /* ============================================================
  * v5 个人英语词汇中心（ui/vocabCenter.js）
  * ============================================================ */
