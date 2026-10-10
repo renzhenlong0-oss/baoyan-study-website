@@ -19,7 +19,7 @@ const DEFAULT_FILES = [
   'core/timeBudgetEngine.js', 'core/gymScheduler.js', 'core/constraintEngine.js',
   'core/strategyEngine.js', 'core/planGenerator.js', 'core/competitivenessEngine.js',
   'core/reviewEngine.js', 'core/vocabEngine.js', 'core/researchEngine.js', 'core/competitionEngine.js',
-  'core/resourceEngine.js', 'core/programmingEngine.js', 'core/snapshot.js',
+  'core/resourceEngine.js', 'core/programmingEngine.js', 'core/snapshot.js', 'core/syncEngine.js',
   'ui/weeklyPlan.js', 'ui/dashboard.js', 'ui/courses.js', 'ui/programming.js',
   'ui/research.js', 'ui/vocabCenter.js', 'ui/english.js', 'ui/competition.js', 'ui/resources.js',
   'ui/review.js', 'ui/settings.js',
@@ -150,7 +150,10 @@ function makeSandbox() {
     AbortController: function () { this.signal = {}; this.abort = function () {}; },
     Blob: function () {}, URL: { createObjectURL: function () { return ''; }, revokeObjectURL: function () {} },
     Image: function () {},
-    FileReader: function () {}
+    FileReader: function () {},
+    /* 浏览器 base64 全局（同步引擎 Contents API 使用） */
+    btoa: function (s) { return Buffer.from(s, 'binary').toString('base64'); },
+    atob: function (b) { return Buffer.from(b, 'base64').toString('binary'); }
   };
   vm.createContext(sandbox);
   return sandbox;

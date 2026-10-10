@@ -16,7 +16,7 @@ const EXPORT_SNIPPET = `{
   renderCompetition, renderResources, renderReview,
   openSettingsPanel, renderSettingsInto,
   renderSettingsProfile, renderSettingsGoals, renderSettingsPolicies,
-  renderSettingsRules, renderSettingsAppearance, renderSettingsData,
+  renderSettingsRules, renderSettingsAppearance, renderSettingsData, renderSettingsSync,
   renderVocabCenter,
   VocabEngine,
   setVocabTab: function (v) { vocabTab = v; },
@@ -152,7 +152,7 @@ try {
 try {
   X.openSettingsPanel();
   t.ok('设置面板打开无异常', true);
-  ['profile', 'goals', 'policies', 'rules', 'appearance', 'data'].forEach(function (g) {
+  ['profile', 'goals', 'policies', 'rules', 'appearance', 'data', 'sync'].forEach(function (g) {
     try {
       var body = H.dummyEl();
       /* 直接调用分组渲染（绕过模块态） */
@@ -162,7 +162,8 @@ try {
         policies: 'renderSettingsPolicies',
         rules: 'renderSettingsRules',
         appearance: 'renderSettingsAppearance',
-        data: 'renderSettingsData'
+        data: 'renderSettingsData',
+        sync: 'renderSettingsSync'
       };
       X[renderers[g]](body);
       t.ok('设置分组 ' + g + ' 无异常', true);

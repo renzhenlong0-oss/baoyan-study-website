@@ -30,6 +30,16 @@ document.addEventListener('planner-save-error', function () {
   setTimeout(function () { b.textContent = ''; }, 8000);
 });
 
+/* 移动端（手机 PWA）：只保留 今日 / 周计划 / 英语 三个模块 + 封面，
+ * 其余标签隐藏；数据仍全量同步（电脑端照常显示全部模块） */
+const MOBILE_TABS = ['today', 'weekplan', 'english'];
+
+function isMobileDevice() {
+  var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+  return typeof window !== 'undefined' && window.innerWidth > 0 && window.innerWidth <= 768;
+}
+
 function init() {
   state.data = loadData();
   /* v3：旧体系周计划（无 engineVersion）按新引擎重建，保留勾选状态 */
@@ -38,10 +48,31 @@ function init() {
   state.viewWeek = currentWeek();
   bindTopbar();
   bindTabs();
+
+  /* 手机版：隐藏非必要标签，默认进入「今日」 */
+  if (isMobileDevice()) {
+    document.querySelectorAll('.tab-btn').forEach(function (b) {
+      if (MOBILE_TABS.indexOf(b.dataset.tab) === -1) b.hidden = true;
+    });
+    state.activeTab = 'today';   // state 初始值 'home' 会被 showCover 复用，手机需重置
+  }
+
   document.addEventListener('planner-data-changed', updateStatusbar);
+
+  /* 跨设备云同步（配置好 Token+配对码后自动生效） */
+  if (typeof SyncEngine !== 'undefined' && SyncEngine.isEnabled()) SyncEngine.start();
+
+  /* PWA：http(s) 下注册服务工作线程（file:// 不支持，忽略） */
+  try {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator &&
+        typeof location !== 'undefined' && /^https?:$/.test(location.protocol)) {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    }
+  } catch (e) { /* 忽略注册失败 */ }
+
   /* 先显示封面，点击后缩动画结束后进入主页。
-     若用户已在封面顶部导航直接点击了某个页面，则保持用户选择 */
-  showCover(function () { switchTab(state.activeTab || 'home'); });
+     手机默认今日；若用户已在封面顶部导航直接点击了某个页面，则保持用户选择 */
+  showCover(function () { switchTab(state.activeTab || (isMobileDevice() ? 'today' : 'home')); });
 }
 
 /* ---------------- DOM 工具 ---------------- */
@@ -95,6 +126,8 @@ function renderTabPlaceholder(tab) {
 }
 
 function switchTab(tab) {
+  /* 手机版只有 今日/周计划/英语 三个模块，其他目标映射到「今日」 */
+  if (isMobileDevice() && MOBILE_TABS.indexOf(tab) === -1) tab = 'today';
   /* 导航条在封面页也常显：封面显示中点击导航 → 直接收起封面进入对应页面 */
   if (typeof coverActive !== 'undefined' && coverActive && typeof dismissCover === 'function') {
     dismissCover();
@@ -147,9 +180,9 @@ function bindTopbar() {
   });
   /* 返回封面（未来多网页的入口枢纽） */
   document.getElementById('btn-cover').addEventListener('click', returnToCover);
-  /* 点击品牌名回主页 */
+  /* 点击品牌名回主页（手机版回「今日」） */
   document.querySelector('.brand').addEventListener('click', function () {
-    switchTab('home');
+    switchTab(isMobileDevice() ? 'today' : 'home');
   });
 }
 
@@ -177,7 +210,10 @@ function updateStatusbar() {
     ? new Date(state.data.lastModified).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     : '尚未保存';
   var bar = document.getElementById('statusbar');
-  bar.textContent = '当前第' + cur + '周  |  本周任务完成率 ' + pct + '%  |  最后保存 ' + saved;
+  var syncTxt = '';
+  if (typeof SyncEngine !== 'undefined') syncTxt = SyncEngine.statusText();
+  bar.textContent = '当前第' + cur + '周  |  本周任务完成率 ' + pct + '%  |  最后保存 ' + saved +
+    (syncTxt ? '  |  ' + syncTxt : '');
   updateWeekLabel();
 }
 

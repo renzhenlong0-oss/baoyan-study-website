@@ -13,7 +13,8 @@ const SETTINGS_GROUPS = [
   ['policies', '推免政策'],
   ['rules', '规则与学期'],
   ['appearance', '外观与AI'],
-  ['data', '数据管理']
+  ['data', '数据管理'],
+  ['sync', '数据互通']
 ];
 
 function openSettingsPanel() {
@@ -60,6 +61,7 @@ function renderSettingsInto(body) {
   else if (settingsGroup === 'policies') renderSettingsPolicies(groupBody);
   else if (settingsGroup === 'rules') renderSettingsRules(groupBody);
   else if (settingsGroup === 'appearance') renderSettingsAppearance(groupBody);
+  else if (settingsGroup === 'sync') renderSettingsSync(groupBody);
   else renderSettingsData(groupBody);
   body.appendChild(groupBody);
 }
@@ -667,4 +669,113 @@ function renderSettingsData(root) {
     }
     root.appendChild(secMig);
   }
+}
+
+/* ============================================================
+ * 数据互通（v5）：手机 PWA 与电脑通过 GitHub 私有仓库同步
+ * 配置：细粒度 Token（仅授权 baoyan-sync 仓库 Contents 读写）
+ *      + 配对码（两端填相同即可共享同一份数据）
+ * ============================================================ */
+
+function renderSettingsSync(root) {
+  var cfg = SyncEngine.loadCfg();
+
+  var sec = el('div', 'settings-section');
+  sec.appendChild(el('div', 'sec-title', '跨设备云同步'));
+  var statusLine = el('div', 'hint', '');
+  function refreshStatus() {
+    var c = SyncEngine.loadCfg();
+    if (!c.enabled) statusLine.textContent = '状态：未启用（填写 Token 与配对码后开启）';
+    else if (SyncEngine._lastError) statusLine.textContent = '状态：同步失败 —— ' + SyncEngine._lastError;
+    else if (c.lastSyncAt) statusLine.textContent = '状态：已启用 · 上次同步 ' + new Date(c.lastSyncAt).toLocaleString('zh-CN');
+    else statusLine.textContent = '状态：已启用 · 等待首次同步（每 25 秒自动拉取，本地改动 2 秒内自动推送）';
+  }
+  refreshStatus();
+  sec.appendChild(statusLine);
+  sec.appendChild(el('div', 'hint',
+    '手机与电脑填【相同的配对码】即可共享同一份计划数据：手机上勾任务，电脑端 25 秒内自动更新。'));
+  root.appendChild(sec);
+
+  /* Token */
+  var secToken = el('div', 'settings-section');
+  secToken.appendChild(el('div', 'sec-title', 'GitHub Token（只授权 baoyan-sync 仓库）'));
+  var fT = el('div', 'field');
+  fT.appendChild(el('label', null, 'Token（github_pat_ 开头）'));
+  var inpToken = document.createElement('input');
+  inpToken.type = 'password';
+  inpToken.value = cfg.token || '';
+  inpToken.placeholder = '粘贴 github_pat_ 开头的 Token';
+  fT.appendChild(inpToken);
+  secToken.appendChild(fT);
+  secToken.appendChild(el('div', 'hint',
+    '创建地址：github.com/settings/personal-access-tokens/new → Only select repositories → baoyan-sync → Contents: Read and write。' +
+    'Token 只存在本机浏览器 localStorage，不会上传到网站或任何公开位置。'));
+  root.appendChild(secToken);
+
+  /* 配对码 */
+  var secCode = el('div', 'settings-section');
+  secCode.appendChild(el('div', 'sec-title', '配对码（两端一致）'));
+  var fC = el('div', 'field');
+  fC.appendChild(el('label', null, '配对码'));
+  var inpCode = document.createElement('input');
+  inpCode.type = 'text';
+  inpCode.value = cfg.code || '';
+  inpCode.placeholder = '6 位配对码，如 AB3K7M';
+  inpCode.maxLength = 6;
+  fC.appendChild(inpCode);
+  secCode.appendChild(fC);
+  var bGen = el('button', 'btn btn-sm', '生成新配对码');
+  bGen.addEventListener('click', function () {
+    inpCode.value = SyncEngine.genCode();
+    alert('新配对码已生成：' + inpCode.value + '。在另一台设备上填入相同的配对码即可互通。');
+  });
+  secCode.appendChild(bGen);
+  root.appendChild(secCode);
+
+  /* 操作按钮 */
+  var btns = el('div', 'settings-section');
+  var bSave = el('button', 'btn btn-primary', '保存并立即同步');
+  bSave.addEventListener('click', function () {
+    var token = inpToken.value.trim();
+    var code = inpCode.value.trim().toUpperCase();
+    if (!token) { alert('请粘贴 Token'); return; }
+    if (!/^[A-Z2-9]{6}$/.test(code)) { alert('配对码应为 6 位字母数字（如 AB3K7M），可点「生成新配对码」创建'); return; }
+    var c = SyncEngine.loadCfg();
+    c.token = token;
+    c.code = code;
+    c.enabled = true;
+    c.lastError = '';
+    SyncEngine.saveCfg();
+    SyncEngine.start();
+    alert('已启用同步。首次连接会自动拉取云端数据（若云端已有数据且更新，将以云端为准并在本地自动备份）。');
+    refreshStatus();
+    updateStatusbar();
+  });
+  btns.appendChild(bSave);
+
+  var bSync = el('button', 'btn', '立即同步一次');
+  bSync.addEventListener('click', function () {
+    if (!SyncEngine.isEnabled()) { alert('请先填写 Token 与配对码并保存'); return; }
+    SyncEngine.pull(function (err, r) {
+      if (err) { alert('同步失败：' + err); return; }
+      refreshStatus();
+      updateStatusbar();
+    });
+  });
+  btns.appendChild(bSync);
+
+  var bOff = el('button', 'btn btn-danger', '断开同步');
+  bOff.addEventListener('click', function () {
+    var c = SyncEngine.loadCfg();
+    c.enabled = false;
+    SyncEngine.saveCfg();
+    SyncEngine.stop();
+    refreshStatus();
+    updateStatusbar();
+  });
+  btns.appendChild(bOff);
+  root.appendChild(btns);
+
+  sec.appendChild(el('div', 'hint',
+    '配对步骤：① 电脑上生成配对码 → ② 手机打开网站（添加主屏幕）→ 设置 → 数据互通 → 粘贴同样的 Token 与配对码 → 完成。'));
 }
