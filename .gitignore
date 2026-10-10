@@ -1,0 +1,8 @@
+# Windows
+Thumbs.db
+Desktop.ini
+
+# 临时文件
+*.log
+
+# 部署验证截图（父目录）

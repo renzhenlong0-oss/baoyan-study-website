@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学习计划管理</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js 不在此同步加载：改为打开"趋势图"时按需加载（多 CDN 回退），
+       避免 CDN 不通时阻塞整个页面初始化 -->
+</head>
+<body>
+  <!-- 全屏封面（每次打开页面显示，点击后缩进入主页） -->
+  <div id="cover-root"></div>
+
+  <!-- 顶部栏 -->
+  <header class="topbar">
+    <div class="brand">学习计划管理</div>
+    <!-- 多功能时钟（封面 → 缩入顶栏左上角） -->
+    <div id="topbar-clock-slot"></div>
+    <div class="week-nav">
+      <button id="week-prev" class="nav-btn" title="上一周">&#9664;</button>
+      <button id="week-label" class="week-label" title="点击回到本周">
+        <span id="week-label-text">第1周</span>
+        <span id="week-current-badge" class="badge-current" hidden>当前</span>
+      </button>
+      <button id="week-next" class="nav-btn" title="下一周">&#9654;</button>
+      <button id="week-back-today" class="btn btn-ghost btn-sm" hidden>回本周</button>
+    </div>
+    <button id="btn-cover" class="btn btn-ghost">封面</button>
+    <button id="btn-settings" class="btn btn-ghost">设置</button>
+  </header>
+
+  <!-- Tab 栏 -->
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="home">首页</button>
+    <button class="tab-btn" data-tab="today">今日</button>
+    <button class="tab-btn" data-tab="weekplan">周计划</button>
+    <button class="tab-btn" data-tab="courses">课程</button>
+    <button class="tab-btn" data-tab="programming">编程训练</button>
+    <button class="tab-btn" data-tab="research">科研</button>
+    <button class="tab-btn" data-tab="english">英语</button>
+    <button class="tab-btn" data-tab="competition">竞赛</button>
+    <button class="tab-btn" data-tab="resources">资源库</button>
+    <button class="tab-btn" data-tab="review">复盘</button>
+  </nav>
+
+  <!-- 内容区 -->
+  <main class="main">
+    <section id="view-home" class="view"></section>
+    <section id="view-today" class="view" hidden></section>
+    <section id="view-weekplan" class="view" hidden></section>
+    <section id="view-courses" class="view" hidden></section>
+    <section id="view-programming" class="view" hidden></section>
+    <section id="view-research" class="view" hidden></section>
+    <section id="view-english" class="view" hidden></section>
+    <section id="view-competition" class="view" hidden></section>
+    <section id="view-resources" class="view" hidden></section>
+    <section id="view-review" class="view" hidden></section>
+  </main>
+
+  <!-- 底部状态栏 -->
+  <footer class="statusbar" id="statusbar"></footer>
+
+  <!-- 弹窗容器 -->
+  <div id="modal-root"></div>
+
+  <script src="data.js"></script>
+  <script src="migration.js"></script>
+  <!-- v3 数据层（常量与默认数据，可编辑数据） -->
+  <script src="data/profile.js"></script>
+  <script src="data/goals.js"></script>
+  <script src="data/policies.js"></script>
+  <script src="data/courses.js"></script>
+  <script src="data/resources.js"></script>
+  <script src="data/curriculum.js"></script>
+  <script src="data/problems.js"></script>
+  <script src="data/roadmap.js"></script>
+  <script src="data/competitions.js"></script>
+  <script src="data/vocabDefaults.js"></script>
+  <script src="data/defaultData.js"></script>
+  <!-- v3 核心引擎（纯逻辑，无 DOM；随开发逐个加入） -->
+  <script src="core/goalEngine.js"></script>
+  <script src="core/policyEngine.js"></script>
+  <script src="core/gpaRiskEngine.js"></script>
+  <script src="core/timeBudgetEngine.js"></script>
+  <script src="core/gymScheduler.js"></script>
+  <script src="core/constraintEngine.js"></script>
+  <script src="core/strategyEngine.js"></script>
+  <script src="core/planGenerator.js"></script>
+  <script src="core/competitivenessEngine.js"></script>
+  <script src="core/researchEngine.js"></script>
+  <script src="core/competitionEngine.js"></script>
+  <script src="core/resourceEngine.js"></script>
+  <script src="core/programmingEngine.js"></script>
+  <script src="core/reviewEngine.js"></script>
+  <script src="core/vocabEngine.js"></script>
+  <script src="core/snapshot.js"></script>
+  <!-- v3 UI 层 -->
+  <script src="ui/weeklyPlan.js"></script>
+  <script src="ui/dashboard.js"></script>
+  <script src="ui/courses.js"></script>
+  <script src="ui/programming.js"></script>
+  <script src="ui/research.js"></script>
+  <script src="ui/vocabCenter.js"></script>
+  <script src="ui/english.js"></script>
+  <script src="ui/competition.js"></script>
+  <script src="ui/resources.js"></script>
+  <script src="ui/review.js"></script>
+  <script src="ui/settings.js"></script>
+  <!-- 应用层 -->
+  <script src="app.js"></script>
+  <script src="schedule.js"></script>
+  <script src="today.js"></script>
+  <script src="cover.js"></script>
+  <script src="aichat.js"></script>
+</body>
+</html>

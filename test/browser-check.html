@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrowserCheck</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div id="cover-root"></div>
+  <header class="topbar">
+    <div class="brand">学习计划管理</div>
+    <div id="topbar-clock-slot"></div>
+    <div class="week-nav">
+      <button id="week-prev" class="nav-btn" title="上一周">&#9664;</button>
+      <button id="week-label" class="week-label" title="点击回到本周">
+        <span id="week-label-text">第1周</span>
+        <span id="week-current-badge" class="badge-current" hidden>当前</span>
+      </button>
+      <button id="week-next" class="nav-btn" title="下一周">&#9654;</button>
+      <button id="week-back-today" class="btn btn-ghost btn-sm" hidden>回本周</button>
+    </div>
+    <button id="btn-cover" class="btn btn-ghost">封面</button>
+    <button id="btn-settings" class="btn btn-ghost">设置</button>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="home">首页</button>
+    <button class="tab-btn" data-tab="today">今日</button>
+    <button class="tab-btn" data-tab="weekplan">周计划</button>
+    <button class="tab-btn" data-tab="courses">课程</button>
+    <button class="tab-btn" data-tab="programming">编程训练</button>
+    <button class="tab-btn" data-tab="research">科研</button>
+    <button class="tab-btn" data-tab="english">英语</button>
+    <button class="tab-btn" data-tab="competition">竞赛</button>
+    <button class="tab-btn" data-tab="resources">资源库</button>
+    <button class="tab-btn" data-tab="review">复盘</button>
+  </nav>
+
+  <main class="main">
+    <section id="view-home" class="view"></section>
+    <section id="view-today" class="view" hidden></section>
+    <section id="view-weekplan" class="view" hidden></section>
+    <section id="view-courses" class="view" hidden></section>
+    <section id="view-programming" class="view" hidden></section>
+    <section id="view-research" class="view" hidden></section>
+    <section id="view-english" class="view" hidden></section>
+    <section id="view-competition" class="view" hidden></section>
+    <section id="view-resources" class="view" hidden></section>
+    <section id="view-review" class="view" hidden></section>
+  </main>
+
+  <footer class="statusbar" id="statusbar"></footer>
+  <div id="modal-root"></div>
+
+  <script>
+    /* 模拟用户真实环境：注入 v2 旧数据（无 version、旧周计划、旧打卡记录），
+       验证 迁移 + 旧周计划重建 + 全页面切换 在真实浏览器中不崩溃 */
+    (function () {
+      var v2 = {
+        userProfile: { name: '任真龙', major: '智能科学与技术（中外合办）', grade: '大一上学期', targetSchool: '985', gpaTarget: 4.0, englishTarget: 550, weeklyStudyHoursTarget: 28, constraints: { gymTime: { start: '16:00', end: '18:00' }, maxNightStudy: '21:30', lunchBreak: { start: '12:40', end: '13:30', taskType: '碎片任务' } } },
+        semester: { totalWeeks: 18, weekOneMonday: '2026-09-07', examWeeksHint: [17, 18], specialWeeks: [ { weeks: [1, 2], label: '军训', note: '课表全空', noClasses: true }, { weeks: [18], label: '金工实习', note: '特殊安排' } ], cet4Exam: { planned: null, expectedDate: '2026-12-20', notAllowed: false, confirmHint: '需确认' } },
+        weekPlans: {
+          '4': { weekNumber: 4, focus: '旧体系', subjects: [
+            { subject: '微积分', plannedHours: 6, goal: '', tasks: [
+              { id: 'legacy-1', day: 1, time: '19:00-21:30', title: '微积分复习+作业', type: '学习', status: 'done', note: '' },
+              { id: 'legacy-2', day: 6, time: '09:00-12:00', title: '微积分专题攻坚', type: '学习', status: 'todo', note: '' }
+            ] },
+            { subject: '英语/四级', plannedHours: 5, goal: '', tasks: [
+              { id: 'legacy-3', day: 1, time: '12:40-13:30', title: '英语单词30个+听力', type: '碎片', status: 'done', note: '' }
+            ] },
+            { subject: '健身', plannedHours: 6, goal: '', tasks: [
+              { id: 'legacy-5', day: 2, time: '16:00-17:40', title: '健身', type: '固定', status: 'skipped', note: '太累' }
+            ] }
+          ] }
+        },
+        dailyLogs: { '2026-09-28': { date: '2026-09-28', weekNumber: 4, weekday: 1, tasksStatus: { 'legacy-1': { status: 'done', note: '', subject: '微积分', title: '微积分复习+作业', duration: 2.5 } }, checklist: { vocabCount: 30 }, aiToolLog: '' } },
+        weekReviews: {}, aiLogs: [],
+        holidays: [ { name: '中秋节', start: '2026-09-25', end: '2026-09-27' }, { name: '国庆节', start: '2026-10-01', end: '2026-10-08' }, { name: '元旦', start: '2027-01-01', end: '2027-01-03' } ],
+        holidayTasks: {}, gradeRules: [ { min: 90, gpa: 4 }, { min: 85, gpa: 3.7 }, { min: 80, gpa: 3.3 }, { min: 75, gpa: 3 }, { min: 70, gpa: 2.7 }, { min: 65, gpa: 2.3 }, { min: 60, gpa: 1 }, { min: 0, gpa: 0 } ],
+        gpaSimulation: null, roadmap: { '循环': { topics: { '循环': true } } },
+        currentWeekOverride: null, coverImage: null,
+        aiConfig: { apiKey: '', model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com' },
+        aiChat: { messages: [], snapshot: null },
+        lastModified: null
+      };
+      localStorage.setItem('studyPlanner', JSON.stringify(v2));
+      window.__seededV2 = true;
+    })();
+  </script>
+
+  <script src="../data.js"></script>
+  <script src="../migration.js"></script>
+  <script src="../data/profile.js"></script>
+  <script src="../data/goals.js"></script>
+  <script src="../data/policies.js"></script>
+  <script src="../data/courses.js"></script>
+  <script src="../data/resources.js"></script>
+  <script src="../data/curriculum.js"></script>
+  <script src="../data/problems.js"></script>
+  <script src="../data/roadmap.js"></script>
+  <script src="../data/competitions.js"></script>
+  <script src="../data/defaultData.js"></script>
+  <script src="../core/goalEngine.js"></script>
+  <script src="../core/policyEngine.js"></script>
+  <script src="../core/gpaRiskEngine.js"></script>
+  <script src="../core/timeBudgetEngine.js"></script>
+  <script src="../core/gymScheduler.js"></script>
+  <script src="../core/constraintEngine.js"></script>
+  <script src="../core/strategyEngine.js"></script>
+  <script src="../core/planGenerator.js"></script>
+  <script src="../core/competitivenessEngine.js"></script>
+  <script src="../core/researchEngine.js"></script>
+  <script src="../core/competitionEngine.js"></script>
+  <script src="../core/resourceEngine.js"></script>
+  <script src="../core/programmingEngine.js"></script>
+  <script src="../core/reviewEngine.js"></script>
+  <script src="../core/snapshot.js"></script>
+  <script src="../ui/weeklyPlan.js"></script>
+  <script src="../ui/dashboard.js"></script>
+  <script src="../ui/courses.js"></script>
+  <script src="../ui/programming.js"></script>
+  <script src="../ui/research.js"></script>
+  <script src="../ui/english.js"></script>
+  <script src="../ui/competition.js"></script>
+  <script src="../ui/resources.js"></script>
+  <script src="../ui/review.js"></script>
+  <script src="../ui/settings.js"></script>
+  <script src="../app.js"></script>
+  <script src="../schedule.js"></script>
+  <script src="../today.js"></script>
+  <script src="../cover.js"></script>
+  <script src="../aichat.js"></script>
+
+  <script>
+    /* 自动巡检：捕获错误 → 点击封面进入 → 逐个切换 Tab → 记录可见性 */
+    window.__errors = [];
+    window.addEventListener('error', function (e) { window.__errors.push(String(e.message)); });
+
+    function writeResult(text) {
+      var pre = document.getElementById('test-output') || document.createElement('pre');
+      pre.id = 'test-output';
+      pre.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;background:#fff;padding:8px;font-size:11px;max-height:60vh;overflow:auto;border:1px solid #000;';
+      pre.textContent = text;
+      if (!pre.parentNode) document.body.appendChild(pre);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(function () {
+        try {
+          var out = [];
+          var all = ['home', 'today', 'weekplan', 'courses', 'programming', 'research', 'english', 'competition', 'resources', 'review'];
+
+          /* 点击封面进入（与用户操作一致） */
+          var cover = document.querySelector('#cover-root .cover');
+          if (cover && typeof cover.click === 'function') cover.click();
+          out.push('cover-clicked: ' + !!cover);
+
+          /* 等封面动画结束后逐个切换 */
+          setTimeout(function () {
+            try {
+              var stopTab = new URLSearchParams(location.search).get('stop');
+              var tour = ['today', 'weekplan', 'courses', 'programming', 'research', 'english', 'competition', 'resources', 'review', 'home'];
+              tour.forEach(function (t) {
+                switchTab(t);
+                var visible = all.filter(function (v) {
+                  var el = document.getElementById('view-' + v);
+                  return el && !el.hidden;
+                });
+                out.push('tab=' + t + ' visible=' + JSON.stringify(visible));
+                /* 主题与隐藏属性实测（在今日页采集计算样式） */
+                if (t === 'today') {
+                  var card = document.querySelector('.view:not([hidden]) .card');
+                  out.push('theme-body-bg=' + getComputedStyle(document.body).backgroundColor);
+                  out.push('theme-card-bg=' + (card ? getComputedStyle(card).backgroundColor : 'no-card'));
+                  out.push('theme-card-text=' + (card ? getComputedStyle(card).color : 'no-card'));
+                  out.push('home-bg-display=' + (function () { var b = document.getElementById('home-bg'); return b ? getComputedStyle(b).display : 'missing'; })());
+                  out.push('hidden-css-check-view-home-display=' + getComputedStyle(document.getElementById('view-home')).display + '（期望 none）');
+                  out.push('tabs-bg=' + getComputedStyle(document.getElementById('tabs')).backgroundColor);
+                  /* 修复2：2026-10-08 应为上班日 */
+                  out.push('holiday-2026-10-08=' + (isHolidayDate('2026-10-08') ? 'HOLIDAY(错误)' : 'workday(正确)'));
+                }
+                if (t === 'home') {
+                  /* 修复1：周次导航在首页也显示 */
+                  out.push('week-nav-display-on-home=' + getComputedStyle(document.querySelector('.week-nav')).display + '（期望 block/flex）');
+                }
+                if (t === 'courses') {
+                  /* 修复3：课表暗色 */
+                  var rl = document.querySelector('.sched-grid .row-label');
+                  out.push('schedule-row-label-bg=' + (rl ? getComputedStyle(rl).backgroundColor : 'no-row-label'));
+                  var th = document.querySelector('.sched-grid thead th');
+                  out.push('schedule-head-bg=' + (th ? getComputedStyle(th).backgroundColor : 'no-head'));
+                }
+                if (t === 'programming') {
+                  /* 修复4：训练项目选择器 */
+                  out.push('problem-pick-count=' + document.querySelectorAll('.problem-pick').length + '（期望 16）');
+                }
+              });
+              /* 截图模式：巡检结束后停在指定页 */
+              if (stopTab && all.indexOf(stopTab) !== -1) switchTab(stopTab);
+              /* 按钮高亮检查 */
+              var activeBtn = document.querySelector('.tab-btn.active');
+              out.push('active-btn=' + (activeBtn ? activeBtn.dataset.tab : 'none'));
+              /* v2 数据迁移验证 */
+              try {
+                out.push('version=' + state.data.version);
+                var p4 = state.data.weekPlans['4'];
+                out.push('week4-engineVersion=' + (p4 ? p4.engineVersion : 'missing'));
+                var kept = [];
+                if (p4) p4.subjects.forEach(function (sb) { sb.tasks.forEach(function (x) { if (x.status === 'done') kept.push(x.title); }); });
+                out.push('week4-keptDone=' + JSON.stringify(kept));
+                out.push('dailyLog-mirror-kept=' + JSON.stringify(state.data.dailyLogs['2026-09-28'] && state.data.dailyLogs['2026-09-28'].tasksStatus['legacy-1'] ? 'yes' : 'no'));
+              } catch (e3) { out.push('migration-check-error=' + e3.message); }
+              out.push('errors=' + JSON.stringify(window.__errors));
+              writeResult('TEST-RESULT\n' + out.join('\n'));
+            } catch (e2) {
+              writeResult('TEST-CRASH: ' + e2.message + '\n' + (e2.stack || ''));
+            }
+          }, 1200);
+        } catch (e1) {
+          writeResult('TEST-SETUP-CRASH: ' + e1.message);
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>
