@@ -1602,6 +1602,35 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .problem-pick.locked { opacity: 0.45; cursor: default; }
 
 /* ============================================================
+ * v5 修复：深色风格漏改的浅色组件（用户反馈的白色区域 + 同类扫描）
+ *   - 周计划工具栏「科目分块/日历视图」切换按钮
+ *   - 日历视图任务小条 .cal-task
+ *   - 危险按钮 .btn-danger / 状态签 .st-todo / 倒计时 .cd-box
+ *   - 路线图节点详情 / 设计逻辑卡 / 逻辑规则关闭徽标
+ * ============================================================ */
+.view-toggle button {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+.view-toggle button:hover { background: rgba(255, 255, 255, 0.12); color: var(--text); }
+.view-toggle button.active { background: var(--ink); color: #fff; }
+
+.cal-task { background: rgba(255, 255, 255, 0.07); }
+
+.btn-danger {
+  background: rgba(229, 115, 104, 0.12);
+  border-color: rgba(229, 115, 104, 0.5);
+  color: var(--red);
+}
+.btn-danger:hover { background: rgba(229, 115, 104, 0.22); border-color: var(--red); }
+
+.st-todo { background: rgba(255, 255, 255, 0.08); color: var(--gray); }
+.cd-box { background: rgba(255, 255, 255, 0.05); }
+.node-detail { background: rgba(255, 255, 255, 0.05); }
+.logic-rule { background: rgba(255, 255, 255, 0.05); }
+.logic-rule-badge.off { background: rgba(255, 255, 255, 0.08); color: var(--gray); }
+
+/* ============================================================
  * v5 个人英语词汇中心（ui/vocabCenter.js）
  * ============================================================ */
 
