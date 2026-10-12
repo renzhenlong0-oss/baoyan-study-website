@@ -4,7 +4,7 @@
  *      （保证每次打开拿最新版本，断网时回退缓存）。
  * ============================================================ */
 
-const CACHE_NAME = 'baoyan-v1';
+const CACHE_NAME = 'baoyan-v2';
 
 const ASSETS = [
   './',
