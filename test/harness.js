@@ -108,6 +108,12 @@ function makeSandbox() {
   const documentStub = {
     _mounted: mounted,
     createElement: function () { return dummyEl('', markMounted); },
+    createTextNode: function (text) {
+      var tn = dummyEl('', markMounted);
+      tn.textContent = text;
+      tn.nodeType = 3;
+      return tn;
+    },
     getElementById: function (id) {
       for (var i = 0; i < mounted.length; i++) {
         if (mounted[i].id === id) return mounted[i];

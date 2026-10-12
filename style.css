@@ -1630,6 +1630,24 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .logic-rule { background: rgba(255, 255, 255, 0.05); }
 .logic-rule-badge.off { background: rgba(255, 255, 255, 0.08); color: var(--gray); }
 
+/* 微积分总结：数学符号面板 + LaTeX 预览（v5） */
+.math-palette { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 4px 0; }
+.math-sym {
+  font-size: 13px; padding: 2px 8px; min-width: 30px;
+  background: rgba(255, 255, 255, 0.06); color: var(--text);
+  border: 1px solid var(--line-soft); border-radius: 4px;
+  transition: border-color 0.12s;
+}
+.math-sym:hover { border-color: var(--accent); color: var(--accent); }
+.math-textarea { resize: vertical; min-height: 54px; }
+.math-preview {
+  margin-top: 6px; padding: 8px 12px;
+  border: 1px dashed var(--line); border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 14px; line-height: 1.7;
+}
+.math-preview .math-block { margin: 4px 0; text-align: center; }
+
 /* 编程训练：题目后附参考答案（点击「查看答案」后展开，深色代码块） */
 .problem-answer {
   margin-top: 8px;

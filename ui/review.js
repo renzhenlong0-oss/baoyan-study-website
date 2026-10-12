@@ -8,6 +8,130 @@
 let reviewSubTab = 'daily';   // 'daily' | 'weekly' | 'trends'
 let reviewDate = null;        // 每日记录选中的日期
 
+/* ============================================================
+ * 微积分总结的数学符号语言（v5）：
+ *   符号面板（点击插入 LaTeX 片段）+ KaTeX 实时渲染预览。
+ *   支持行内 $...$ 与独立公式 $$...$$；KaTeX 按需从 CDN 加载。
+ * ============================================================ */
+
+/* 微积分常用符号面板：[显示, 插入的 LaTeX 片段] */
+const CALC_SYMBOLS = [
+  ['∫', '\\int '], ['∫ₐᵇ', '\\int_a^b '], ['∑', '\\sum_{i=1}^{n} '], ['√', '\\sqrt{ }'],
+  ['分数', '\\frac{ }{ }'], ['lim', '\\lim_{x \\to a} '], ['d/dx', '\\frac{d}{dx} '],
+  ['∂', '\\partial '], ['∇', '\\nabla '], ['∞', '\\infty '],
+  ['x²', '^{2}'], ['xₙ', '_{n}'],
+  ['α', '\\alpha '], ['β', '\\beta '], ['γ', '\\gamma '], ['δ', '\\delta '],
+  ['ε', '\\varepsilon '], ['θ', '\\theta '], ['λ', '\\lambda '], ['π', '\\pi '],
+  ['σ', '\\sigma '], ['φ', '\\varphi '], ['ω', '\\omega '], ['Δ', '\\Delta '], ['Σ', '\\Sigma '],
+  ['≤', '\\leq '], ['≥', '\\geq '], ['≠', '\\neq '], ['≈', '\\approx '],
+  ['→', '\\to '], ['⇒', '\\Rightarrow '], ['∈', '\\in '], ['∀', '\\forall '], ['∃', '\\exists ']
+];
+
+const KATEX_CDNS = [
+  { css: 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css', js: 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js' },
+  { css: 'https://cdn.bootcdn.net/ajax/libs/KaTeX/0.16.11/katex.min.css', js: 'https://cdn.bootcdn.net/ajax/libs/KaTeX/0.16.11/katex.min.js' },
+  { css: 'https://unpkg.com/katex@0.16.11/dist/katex.min.css', js: 'https://unpkg.com/katex@0.16.11/dist/katex.min.js' }
+];
+let katexFailed = false;
+let katexQueue = null;
+
+function ensureKatex(onDone) {
+  if (typeof katex !== 'undefined') { onDone(); return; }
+  if (katexQueue) { katexQueue.push(onDone); return; }
+  katexQueue = [onDone];
+  var i = 0;
+  function flush() {
+    var q = katexQueue;
+    katexQueue = null;
+    q.forEach(function (cb) { cb(); });
+  }
+  function tryNext() {
+    if (typeof katex !== 'undefined') { flush(); return; }
+    if (i >= KATEX_CDNS.length) { katexFailed = true; flush(); return; }
+    var cdn = KATEX_CDNS[i++];
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = cdn.css;
+    document.head.appendChild(link);
+    var s = document.createElement('script');
+    s.src = cdn.js;
+    s.onload = tryNext;    // 加载成功后仍需确认 katex 已定义
+    s.onerror = tryNext;
+    document.head.appendChild(s);
+  }
+  tryNext();
+}
+
+/* 构建符号面板：点击把对应 LaTeX 片段插入 textarea 光标处 */
+function buildMathPalette(textarea) {
+  var bar = el('div', 'math-palette');
+  CALC_SYMBOLS.forEach(function (item) {
+    var b = el('button', 'math-sym', item[0]);
+    b.type = 'button';
+    b.title = '插入 ' + item[1].replace(/\\/g, '').trim() + '（点击插入光标处）';
+    b.addEventListener('click', function (ev) {
+      if (ev && ev.preventDefault) ev.preventDefault();
+      insertAtCursor(textarea, item[1]);
+    });
+    bar.appendChild(b);
+  });
+  bar.appendChild(el('span', 'hint', '支持 LaTeX：行内 $x^2$、独立公式 $$\\int_a^b$$'));
+  return bar;
+}
+
+/* 在 textarea 光标处插入文本（无选区时追加到末尾） */
+function insertAtCursor(textarea, snippet) {
+  var start = textarea.selectionStart != null ? textarea.selectionStart : textarea.value.length;
+  var end = textarea.selectionEnd != null ? textarea.selectionEnd : start;
+  textarea.value = textarea.value.slice(0, start) + snippet + textarea.value.slice(end);
+  var pos = start + snippet.length;
+  if (textarea.focus) textarea.focus();
+  if (textarea.setSelectionRange) textarea.setSelectionRange(pos, pos);
+  if (textarea.dispatchEvent && typeof Event !== 'undefined') {
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+/* 渲染数学预览：解析 $$ 独立公式 与 $ 行内公式，其余为普通文本。
+ * KaTeX 未加载时先提示并排队，全部 CDN 失败则退回纯文本。 */
+function renderMathPreview(container, text) {
+  container.innerHTML = '';
+  var content = String(text || '').trim();
+  if (!content) { container.style.display = 'none'; return; }
+  container.style.display = '';
+
+  if (typeof katex === 'undefined') {
+    if (katexFailed) {
+      container.appendChild(el('div', 'hint', '数学渲染组件加载失败（需要网络），以下为纯文本：'));
+      container.appendChild(document.createTextNode(content));
+      return;
+    }
+    container.appendChild(el('div', 'hint', '正在加载数学渲染组件（需要网络）…'));
+    ensureKatex(function () { renderMathPreview(container, content); });
+    return;
+  }
+
+  var parts = content.split(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g);
+  parts.forEach(function (part) {
+    if (!part) return;
+    if (/^\$\$/.test(part)) {
+      var block = el('div', 'math-block');
+      try {
+        katex.render(part.slice(2, -2), block, { displayMode: true, throwOnError: false });
+      } catch (e) { block.textContent = part; }
+      container.appendChild(block);
+    } else if (/^\$/.test(part)) {
+      var inline = el('span', 'math-inline');
+      try {
+        katex.render(part.slice(1, -1), inline, { displayMode: false, throwOnError: false });
+      } catch (e) { inline.textContent = part; }
+      container.appendChild(inline);
+    } else {
+      container.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
 /* Chart.js 按需加载：依次尝试多个 CDN，全部失败才提示不可用 */
 const CHART_CDNS = [
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js',
@@ -152,18 +276,29 @@ function renderReviewForm(container, dateStr, opts) {
   numRow.appendChild(f2);
   container.appendChild(numRow);
 
-  /* 一句话总结 */
+  /* 一句话总结（微积分：数学符号面板 + LaTeX 实时预览 + 可拖拽扩大） */
   var f3 = el('div', 'field');
   f3.appendChild(el('label', null, '微积分一句话总结'));
   var inpCalc = document.createElement('textarea');
-  inpCalc.rows = 1;
+  inpCalc.rows = 3;
+  inpCalc.className = 'math-textarea';
   inpCalc.value = c.calculusSummary || '';
   inpCalc.addEventListener('change', function () {
     c.calculusSummary = inpCalc.value;
     saveDailyLog(dateStr, { checklist: c });
     updateStatusbar();
   });
+  f3.appendChild(buildMathPalette(inpCalc));   // 符号面板：点击插入光标处
   f3.appendChild(inpCalc);
+  var calcPreview = el('div', 'math-preview');
+  calcPreview.style.display = 'none';
+  f3.appendChild(calcPreview);
+  var calcTimer = null;
+  inpCalc.addEventListener('input', function () {
+    clearTimeout(calcTimer);
+    calcTimer = setTimeout(function () { renderMathPreview(calcPreview, inpCalc.value); }, 300);
+  });
+  renderMathPreview(calcPreview, inpCalc.value);   // 载入时先渲染已有内容
   container.appendChild(f3);
 
   var f4 = el('div', 'field');
