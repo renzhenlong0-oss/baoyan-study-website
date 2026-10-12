@@ -322,11 +322,14 @@ const SyncEngine = {
 
   /* ---------------- 自动同步 ---------------- */
 
-  /* 开始自动同步（页面初始化后调用一次） */
-  start: function () {
+  /* 开始自动同步（页面初始化后调用一次）；initialCb 用于首次同步的反馈 */
+  start: function (initialCb) {
     var self = this;
     if (!this.isEnabled()) return;
-    this.pull(function () {});
+    /* 首次动作用 push：它会自动分派 ——
+       云端为空 → 上传本地数据建立基线（修复"配好后等待首次同步"不动的问题）；
+       云端更新 → 转为拉取采纳；内容相同 → 直接标记已同步 */
+    this.push(initialCb || function () {});
     if (!this._pollTimer) {
       this._pollTimer = setInterval(function () { self.pull(function () {}); }, this.POLL_MS);
     }

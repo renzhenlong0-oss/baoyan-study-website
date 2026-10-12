@@ -746,10 +746,15 @@ function renderSettingsSync(root) {
     c.enabled = true;
     c.lastError = '';
     SyncEngine.saveCfg();
-    SyncEngine.start();
-    alert('已启用同步。首次连接会自动拉取云端数据（若云端已有数据且更新，将以云端为准并在本地自动备份）。');
-    refreshStatus();
-    updateStatusbar();
+    bSave.textContent = '同步中…';
+    /* start 会立即执行一次实际同步（云端为空→上传本地数据；云端更新→拉取采纳） */
+    SyncEngine.start(function (err, r) {
+      bSave.textContent = '保存并立即同步';
+      if (err) { alert('同步失败：' + err + '\n\n请检查：① Token 是否授权了 baoyan-sync 仓库的 Contents 读写；② 网络是否能访问 api.github.com。'); }
+      else alert('同步完成！' + (r && r.adopted ? '云端数据已拉取到本机（本地数据已自动备份）。' : '本机数据已上传云端。'));
+      refreshStatus();
+      updateStatusbar();
+    });
   });
   btns.appendChild(bSave);
 
